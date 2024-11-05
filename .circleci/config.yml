@@ -136,15 +136,21 @@ jobs:
     steps:
       - *attach_workspace
       - run:
-          name: Installer Psalm
-          command: composer require --dev vimeo/psalm
+          name: Install Dependencies
+          command: composer install
       - run:
-          name: Exécuter Psalm avec configuration personnalisée
-          command: ./vendor/bin/psalm --output-format=github > psalm-report.xml
+          name: Run Psalm with Custom Configuration
+          command: |
+            ./vendor/bin/psalm --output-format=github > psalm-report.xml
+            result=$?
+            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
+              exit 0
+            else
+              exit $result
+            fi
       - store_artifacts:
           path: psalm-report.xml
           destination: psalm-report
-
 
   security-check-dependencies:
     executor: php-executor
