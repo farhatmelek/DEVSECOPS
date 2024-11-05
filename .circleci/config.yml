@@ -179,7 +179,7 @@ jobs:
         name: Run PHP Metrics Analysis
         command: |
           ./vendor/bin/phpmetrics --report-html=phpmetrics-report . || exit 0
-        - store_artifacts:
+      - store_artifacts:
           path: phpmetrics-report
           destination: phpmetrics-report
         
