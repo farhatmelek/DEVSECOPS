@@ -223,7 +223,7 @@ jobs:
 
             # Build the Docker image
             docker build \
-            -f Dockerfile \
+            -f docker/Dockerfile \
             -t $REPOSITORY:$TAG \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg TAG="${TAG}" \
