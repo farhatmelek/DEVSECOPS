@@ -98,8 +98,8 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
       - run:
-        name: Update missing dependencies in lock file
-        command: composer update vimeo/psalm --no-interaction --no-ansi --prefer-dist
+          name: Update missing dependencies in lock file
+          command: composer update vimeo/psalm --no-interaction --no-ansi --prefer-dist
       - run:
           name: Install dependencies
           command: composer install --no-interaction --no-ansi --prefer-dist
