@@ -128,7 +128,7 @@ jobs:
           path: phpcs-report.txt
           destination: phpcs-report
 
-lint-psalm:
+  lint-psalm:
     executor: php-executor
     steps:
       - *attach_workspace
