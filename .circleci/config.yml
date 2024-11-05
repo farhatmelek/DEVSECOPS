@@ -131,7 +131,6 @@ jobs:
           path: phpcs-report.txt
           destination: phpcs-report
 
-  jobs:
     lint-psalm:
       executor: php-executor
       steps:
