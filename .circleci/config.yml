@@ -271,6 +271,9 @@ workflows:
       - lint-phpcs:
           requires:
             - build-setup
+      - lint-psalm: 
+          requires:
+            - build-docker-image
 
       - security-check-dependencies:
           requires:
@@ -316,6 +319,3 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
-      - lint-psalm: 
-          requires:
-            - build-docker-image
