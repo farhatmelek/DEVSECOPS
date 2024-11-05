@@ -98,6 +98,9 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
       - run:
+        name: Update missing dependencies in lock file
+        command: composer update vimeo/psalm --no-interaction --no-ansi --prefer-dist
+      - run:
           name: Install dependencies
           command: composer install --no-interaction --no-ansi --prefer-dist
       - save_cache:
@@ -135,9 +138,6 @@ jobs:
       - run:
           name: Install Dependencies
           command: composer install
-      - run:
-          name: Install Psalm
-          command: composer require --dev vimeo/psalm
       - run:
           name: Run Psalm with Custom Configuration
           command: |
@@ -281,10 +281,6 @@ workflows:
       - lint-phpcs:
           requires:
             - build-setup
-      - lint-psalm: 
-          requires:
-            -  build-setup
-
       - security-check-dependencies:
           requires:
             - build-setup
@@ -299,6 +295,9 @@ workflows:
                 - main
                 - master
                 - /^release\/.*/
+      - lint-psalm: 
+          requires:
+            -  build-setup
 #      - deploy-ssh-production:
 #          requires:
 #              - hold
