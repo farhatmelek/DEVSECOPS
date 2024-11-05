@@ -272,8 +272,8 @@ workflows:
           requires:
             - build-setup
       - lint-psalm: 
-        requires:
-          - build-setup
+          requires:
+            - build-setup
       - security-check-dependencies:
           requires:
             - build-setup
