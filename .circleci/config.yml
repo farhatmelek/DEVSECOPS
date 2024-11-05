@@ -131,30 +131,30 @@ jobs:
           path: phpcs-report.txt
           destination: phpcs-report
 
-    lint-psalm:
-      executor: php-executor
-      steps:
-        - *attach_workspace
-        - run:
-            name: Installer Psalm
-            command: composer require --dev vimeo/psalm
-        - run:
-            name: Générer un fichier de configuration Psalm
-            command: ./vendor/bin/psalm --init
-        - run:
-            name: Exécuter Psalm avec configuration générée
-            command: |
-              ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
-        - run:
-            name: Vérifier si le rapport Psalm a été généré
-            command: |
-              if [ ! -f psalm-report.xml ]; then
-                echo "Erreur : psalm-report.xml n'a pas été généré."
-                exit 1
-              fi
-        - store_artifacts:
-            path: psalm-report.xml
-            destination: psalm-report
+  lint-psalm:
+    executor: php-executor
+    steps:
+      - *attach_workspace
+      - run:
+          name: Installer Psalm
+          command: composer require --dev vimeo/psalm
+      - run:
+          name: Générer un fichier de configuration Psalm
+          command: ./vendor/bin/psalm --init
+      - run:
+          name: Exécuter Psalm avec configuration générée
+          command: |
+            ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
+      - run:
+          name: Vérifier si le rapport Psalm a été généré
+          command: |
+            if [ ! -f psalm-report.xml ]; then
+              echo "Erreur : psalm-report.xml n'a pas été généré."
+              exit 1
+            fi
+      - store_artifacts:
+          path: psalm-report.xml
+          destination: psalm-report
 
 
 
