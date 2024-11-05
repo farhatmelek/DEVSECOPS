@@ -180,8 +180,8 @@ jobs:
         command: |
           ./vendor/bin/phpmetrics --report-html=phpmetrics-report . || exit 0
       - store_artifacts:
-          path: phpmetrics-report
-          destination: phpmetrics-report
+        path: phpmetrics-report
+        destination: phpmetrics-report
         
         
   metrics-phploc:
@@ -194,7 +194,7 @@ jobs:
     - run:
       name: Run PHPLoc Analysis
       command: |
-      ./vendor/bin/phploc --log-xml=phploc-report.xml . || exit 0
+        ./vendor/bin/phploc --log-xml=phploc-report.xml . || exit 0
     - store_artifacts:
       path: phploc-report.xml
       destination: phploc-report
