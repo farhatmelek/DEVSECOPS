@@ -177,7 +177,7 @@ jobs:
         command: composer require --dev phpmetrics/phpmetrics
       - run:
         name: Run PHP Metrics Analysis
-          command: |
+        command: |
           ./vendor/bin/phpmetrics --report-html=phpmetrics-report . || exit 0
         - store_artifacts:
           path: phpmetrics-report
