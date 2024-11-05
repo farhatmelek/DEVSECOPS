@@ -273,7 +273,7 @@ workflows:
             - build-setup
       - lint-psalm: 
           requires:
-            - build-docker-image
+            -  build-setup
 
       - security-check-dependencies:
           requires:
