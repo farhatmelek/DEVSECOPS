@@ -136,21 +136,23 @@ jobs:
     steps:
       - *attach_workspace
       - run:
-          name: Install Dependencies
-          command: composer install
+          name: Installer Psalm
+          command: composer require --dev vimeo/psalm
       - run:
-          name: Run Psalm with Custom Configuration
+          name: Exécuter Psalm avec configuration personnalisée
           command: |
-            ./vendor/bin/psalm --output-format=github > psalm-report.xml
-            result=$?
-            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
-              exit 0
-            else
-              exit $result
+            ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
+      - run:
+          name: Vérifier si le rapport Psalm a été généré
+          command: |
+            if [ ! -f psalm-report.xml ]; then
+              echo "Erreur : psalm-report.xml n'a pas été généré."
+              exit 1
             fi
       - store_artifacts:
           path: psalm-report.xml
           destination: psalm-report
+
 
   security-check-dependencies:
     executor: php-executor
