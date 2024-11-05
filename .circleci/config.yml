@@ -194,7 +194,8 @@ jobs:
     - run:
       name: Run PHPLoc Analysis
       command: |
-        ./vendor/bin/phploc --log-xml=phploc-report.xml . || exit 0
+        chmod +x ./vendor/bin/phploc
+        ./vendor/bin/phploc --log-xml=phploc-report.xml . || echo "PHPLoc encountered an issue
     - store_artifacts:
       path: phploc-report.xml
       destination: phploc-report
