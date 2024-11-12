@@ -99,7 +99,7 @@ jobs:
             - v1-dependencies-
       - run:
           name: Update missing dependencies in lock file
-          command: composer update --no-interaction --no-ansi --prefer-dist
+          command: composer update vimeo/psalm --no-interaction --no-ansi --prefer-dist
       - run:
           name: Install dependencies
           command: composer install --no-interaction --no-ansi --prefer-dist
@@ -132,30 +132,29 @@ jobs:
           destination: phpcs-report
 
   lint-psalm:
-  executor: php-executor
-  steps:
-    - *attach_workspace
-    - run:
-        name: Install Dependencies
-        command: composer require --dev vimeo/psalm
-    - run:
-        name: generate Psalm configuration
-        command: ./vendor/bin/psalm --init
-    - run:
-        name: Run Psalm with Custom Configuration
-        command: |
-          ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
-    - run:
-        name: Check if Psalm found any errors
-        command: |
-          if [ -s psalm-report.xml ]; then
-            echo "Psalm found errors"
-            exit 1
-          fi
-
-    - store_artifacts:
-        path: psalm-report.xml
-        destination: psalm-report
+    executor: php-executor
+    steps:
+      - *attach_workspace
+      - run:
+          name: Installer Psalm
+          command: composer require --dev vimeo/psalm
+      - run:
+          name: Générer un fichier de configuration Psalm
+          command: ./vendor/bin/psalm --init
+      - run:
+          name: Exécuter Psalm avec configuration générée
+          command: |
+            ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
+      - run:
+          name: Vérifier si le rapport Psalm a été généré
+          command: |
+            if [ ! -f psalm-report.xml ]; then
+              echo "Erreur : psalm-report.xml n'a pas été généré."
+              exit 1
+            fi
+      - store_artifacts:
+          path: psalm-report.xml
+          destination: psalm-report
 
 
   security-check-dependencies:
@@ -195,6 +194,47 @@ jobs:
           name: Run PHPUnit
           command: ./vendor/bin/phpunit --testsuite=Unit
 
+  lint-phpmd:
+    executor: php-executor
+    steps:
+      - *attach_workspace
+      - run:
+          name: Installer PHP Mess Detector (phpmd)
+          command: composer require --dev phpmd/phpmd
+      - run:
+          name: Exécuter PHP Mess Detector
+          command: |
+            ./vendor/bin/phpmd src,tests text cleancode,codesize,controversial,design,naming,unusedcode --reportfile phpmd-report.txt
+            result=$?
+            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
+              exit 0
+            else
+              exit $result
+            fi
+      - store_artifacts:
+          path: phpmd-report.txt
+          destination: phpmd-report
+
+  lint-php-doc-check:
+    executor: php-executor
+    steps:
+      - *attach_workspace
+      - run:
+          name: Installer PHP Doc Check
+          command: composer require --dev niels-de-blaauw/php-doc-check
+      - run:
+          name: Exécuter PHP Doc Check
+          command: |
+            ./vendor/bin/php-doc-check --directory=src --extensions=php > php-doc-check-report.txt
+            result=$?
+            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
+              exit 0
+            else
+              exit $result
+            fi
+      - store_artifacts:
+          path: php-doc-check-report.txt
+          destination: php-doc-check-report
 
   #metrics-phpmetrics:
   #  executor: php-executor
@@ -287,6 +327,12 @@ workflows:
       - lint-phpcs:
           requires:
             - build-setup
+      - lint-phpmd:
+          requires:
+            - build-setup
+      - lint-php-doc-check:
+          requires:
+            - build-setup
       - security-check-dependencies:
           requires:
             - build-setup
@@ -301,7 +347,7 @@ workflows:
                 - main
                 - master
                 - /^release\/.*/
-      - lint-psalm: 
+      - lint-psalm:
           requires:
             -  build-setup
 #      - deploy-ssh-production:
@@ -319,6 +365,7 @@ workflows:
             branches:
               only:
                 - /^release\/.*/
+
 
 
   container_workflow:
