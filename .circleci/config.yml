@@ -254,31 +254,32 @@ jobs:
   #      destination: phpmetrics-report
 
   deploy-ec2-production:
-      executor: simple-executor
-      steps:
-        - add_ssh_keys:
-            fingerprints:
-              - "${AWS_SSH_KEY_FINGERPRINT}"
-        - run:
-            name: Déploiement sur AWS EC2
-            command: |
-              ssh -o StrictHostKeyChecking=no $AWS_EC2_USER@$AWS_EC2_HOST << 'EOF'
-                # Naviguer vers le répertoire de déploiement
-                cd $DEPLOY_DIRECTORY
+    executor: simple-executor
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "${AWS_SSH_KEY_FINGERPRINT}"
+      - run:
+          name: Déploiement sur AWS EC2
+          command: |
+            ssh -o StrictHostKeyChecking=no $AWS_EC2_USER@$AWS_EC2_HOST \<< 'EOF'
+              # Naviguer vers le répertoire de déploiement
+              cd $DEPLOY_DIRECTORY
+            
+              # Mettre à jour le dépôt
+              git pull origin main
+            
+              # Installer les dépendances
+              composer install --no-dev --optimize-autoloader
+            
+              # (Optionnel) Compiler des assets si nécessaire
+              # npm install && npm run build
+            
+              # Redémarrer le service (par exemple, si l'application utilise PHP-FPM)
+              sudo systemctl restart php-fpm
+              sudo systemctl restart nginx
+            EOF
 
-                # Mettre à jour le dépôt
-                git pull origin main
-
-                # Installer les dépendances
-                composer install --no-dev --optimize-autoloader
-
-                # (Optionnel) Compiler des assets si nécessaire
-                # npm install && npm run build
-
-                # Redémarrer le service (par exemple, si l'application utilise PHP-FPM)
-                sudo systemctl restart php-fpm
-                sudo systemctl restart nginx
-              EOF
   
   
   
@@ -394,15 +395,6 @@ workflows:
               only:
                 - /^release\/.*/
 
-      - deploy-ec2-production:
-          requires:
-            - hold
-          filters:
-            branches:
-              only:
-                - main
-                - master
-
 
 
   container_workflow:
@@ -418,3 +410,22 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
+
+production_deployment:
+  jobs:
+    - hold:
+        type: approval
+        filters:
+          branches:
+            only:
+              - main
+              - master
+    - deploy-ec2-production:
+        requires:
+          - hold
+        filters:
+          branches:
+            only:
+              - main
+              - master
+
