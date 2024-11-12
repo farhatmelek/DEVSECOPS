@@ -99,7 +99,7 @@ jobs:
             - v1-dependencies-
       - run:
           name: Update missing dependencies in lock file
-          command: composer update vimeo/psalm --no-interaction --no-ansi --prefer-dist
+          command: composer update --no-interaction --no-ansi --prefer-dist
       - run:
           name: Install dependencies
           command: composer install --no-interaction --no-ansi --prefer-dist
@@ -137,17 +137,22 @@ jobs:
     - *attach_workspace
     - run:
         name: Install Dependencies
-        command: composer install
+        command: composer require --dev vimeo/psalm
+    - run:
+        name: generate Psalm configuration
+        command: ./vendor/bin/psalm --init
     - run:
         name: Run Psalm with Custom Configuration
         command: |
-          ./vendor/bin/psalm --output-format=github > psalm-report.xml
-          result=$?
-          if [ $result -eq 1 ] || [ $result -eq 2 ]; then
-            echo "Psalm completed with warnings."
-            result=0
+          ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
+    - run:
+        name: Check if Psalm found any errors
+        command: |
+          if [ -s psalm-report.xml ]; then
+            echo "Psalm found errors"
+            exit 1
           fi
-          exit $result
+
     - store_artifacts:
         path: psalm-report.xml
         destination: psalm-report
