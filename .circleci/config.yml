@@ -253,7 +253,7 @@ jobs:
   #      path: phpmetrics-report
   #      destination: phpmetrics-report
 
-    deploy-ec2-production:
+  deploy-ec2-production:
       executor: simple-executor
       steps:
         - add_ssh_keys:
@@ -321,7 +321,6 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-
 
   deploy-ssh-staging:
     executor: simple-executor
