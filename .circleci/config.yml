@@ -348,6 +348,9 @@ workflows:
       - lint-psalm:
           requires:
             -  build-setup
+      - metrics-phpmetrics:
+          requires:
+            - build-setup
 #      - deploy-ssh-production:
 #          requires:
 #              - hold
