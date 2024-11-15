@@ -235,23 +235,22 @@ jobs:
       - store_artifacts:
           path: php-doc-check-report.txt
           destination: php-doc-check-report
-
-  #metrics-phpmetrics:
-  #  executor: php-executor
-  #  steps:
-  #    - *attach_workspace
-  #    - run:
-  #      name: Install PHP Metrics
-  #      command: composer require --dev phpmetrics/phpmetrics
-  #    - run:
-  #      name: Run PHP Metrics Analysis
-  #      command: |
-  #        ./vendor/bin/phpmetrics --report-html=phpmetrics-report . || exit 0
-  #    - store_artifacts:
-  #      path: phpmetrics-report
-  #      destination: phpmetrics-report
-        
-        
+          
+  metrics-phpmetrics:
+    executor: php-executor
+    steps:
+      - *attach_workspace
+      - run:
+          name: Installer PHP Metrics
+          command: composer require --dev phpmetrics/phpmetrics
+      - run:
+          name: Exécuter PHP Metrics
+          command: |
+            mkdir -p metrics-report
+          ./vendor/bin/phpmetrics --report-html=metrics-report ./src
+      - store_artifacts:
+          path: metrics-report
+          destination: phpmetrics-report
 
                   
   build-docker-image:
@@ -350,6 +349,9 @@ workflows:
       - lint-psalm:
           requires:
             -  build-setup
+      - metrics-phpmetrics:
+          requires:
+            - build-setup
 #      - deploy-ssh-production:
 #          requires:
 #              - hold
