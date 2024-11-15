@@ -247,7 +247,7 @@ jobs:
           name: Exécuter PHP Metrics
           command: |
             mkdir -p metrics-report
-          ./vendor/bin/phpmetrics --report-html=metrics-report ./src
+            ./vendor/bin/phpmetrics --report-html=metrics-report ./src
       - store_artifacts:
           path: metrics-report
           destination: phpmetrics-report
