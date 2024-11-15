@@ -144,7 +144,7 @@ jobs:
       - run:
           name: Exécuter Psalm avec configuration générée
           command: |
-            ./vendor/bin/psalm --output-format=github
+            ./vendor/bin/psalm --output-format=github --report=psalm-report.xml
       - run:
           name: Vérifier si le rapport Psalm a été généré
           command: |
