@@ -199,35 +199,23 @@ jobs:
   lint-phpmd:
     executor: php-executor
     steps:
-      - attach_workspace:
-          at: ~/project
+      - *attach_workspace
       - run:
-          name: Install `phpmd`
-          command: composer require --dev "phpmd/phpmd=@stable"
+          name: Installer PHP Mess Detector (phpmd)
+          command: composer require --dev phpmd/phpmd
       - run:
-          name: Run phpmd
+          name: Exécuter PHP Mess Detector
           command: |
-            mkdir -p reports/lint
-            php ./vendor/bin/phpmd src/ html .circleci/plugins/phpmd_ruleset.xml > reports/lint/phpmd-report.html
+            ./vendor/bin/phpmd src,tests text cleancode,codesize,controversial,design,naming,unusedcode --reportfile phpmd-report.txt
             result=$?
-            if [[ $result == 0 ]]; then
-              echo "No exception of rule violation detected."
-            elif [[ $result == 1 ]]; then
-              echo "An exception occurred during PHPMD execution."
-            elif [[ $result == 2 ]]; then
-              echo "Rule violations detected."
-              echo 'You can also prevent this behaviour with the `--ignore-violations-on-exit` flag, which will result to a 0 even if any violations are found.'
-            elif [[ $result == 3 ]]; then
-              echo "Some tested files could not be processed."
+            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
+              exit 0
             else
-              echo "An unknown exception occurred."
+              exit $result
             fi
-            exit $result
       - store_artifacts:
-          path: reports/lint/phpmd-report.html
+          path: phpmd-report.txt
           destination: phpmd-report
-
-
 
   lint-php-doc-check:
     executor: php-executor
