@@ -202,8 +202,7 @@ jobs:
   lint-phpmd:
     executor: php-executor
     steps:
-      - attach_workspace:
-          at: ~/project
+      - *attach_workspace
       - run:
           name: Install `phpmd`
           command: composer require --dev "phpmd/phpmd=@stable"
@@ -229,9 +228,6 @@ jobs:
       - store_artifacts:
           path: reports/lint/phpmd-report.html
           destination: phpmd-report
-
-
-
 
   lint-php-doc-check:
     executor: php-executor
