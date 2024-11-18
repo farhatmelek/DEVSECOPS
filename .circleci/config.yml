@@ -86,6 +86,11 @@ jobs:
             echo "Current date: $(date)"
             echo "--------------------"
             env
+      - run:
+          name: Scan de sécurité de l'image Docker
+          command: docker scan $DOCKER_IMAGE
+
+
 
   build-setup:
     executor: php-executor
@@ -199,18 +204,26 @@ jobs:
     steps:
       - *attach_workspace
       - run:
-          name: Installer PHP Mess Detector (phpmd)
-          command: composer require --dev phpmd/phpmd
+          name: Install `phpmd`
+          command: composer require --dev "phpmd/phpmd=@stable"
       - run:
-          name: Exécuter PHP Mess Detector
+          name: Run phpmd
           command: |
-            ./vendor/bin/phpmd src,tests text cleancode,codesize,controversial,design,naming,unusedcode --reportfile phpmd-report.txt
+            php ./vendor/bin/phpmd src/ html .circleci/plugins/phpmd_ruleset.xml > reports/lint/phpmd-report.html
             result=$?
-            if [ $result -eq 1 ] || [ $result -eq 2 ]; then
-              exit 0
+            if [[ $result == 0 ]]; then
+              echo "No exception of rule violation detected."
+            elif [[ $result == 1 ]]; then
+              echo "An exception occured during PHPMD execution."
+            elif [[ $result == 2 ]]; then
+              echo "Rule violations detected."
+              echo 'You can also prevent this behaviour with the `--ignore-violations-on-exit` flag, which will result to a 0 even if any violations are found.'
+            elif [[ $result == 3 ]]; then
+              echo "Some tested files could not processed"
             else
-              exit $result
+              echo "An unknown exception occured"
             fi
+            exit $result
       - store_artifacts:
           path: phpmd-report.txt
           destination: phpmd-report
@@ -376,10 +389,13 @@ workflows:
           filters:
             branches:
               only:
-                - master
+                #- master
                 - main
                 - develop
                 - /^feature\/.*/
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
+                -
+
+
