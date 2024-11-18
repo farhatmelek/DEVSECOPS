@@ -12,6 +12,7 @@ use function imagefilledrectangle;
 use function imagepng;
 use function imagettftext;
 
+/** @psalm-suppress UnusedClass */
 class ImageCreator
 {
     protected $im;

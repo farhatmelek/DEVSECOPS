@@ -144,7 +144,7 @@ jobs:
       - run:
           name: Exécuter Psalm avec configuration générée
           command: |
-            ./vendor/bin/psalm --output-format=github > psalm-report.xml || true
+            ./vendor/bin/psalm --output-format=github --report=psalm-report.xml
       - run:
           name: Vérifier si le rapport Psalm a été généré
           command: |
@@ -155,8 +155,6 @@ jobs:
       - store_artifacts:
           path: psalm-report.xml
           destination: psalm-report
-
-
 
 
   security-check-dependencies:
@@ -238,52 +236,23 @@ jobs:
           path: php-doc-check-report.txt
           destination: php-doc-check-report
 
-  #metrics-phpmetrics:
-  #  executor: php-executor
-  #  steps:
-  #    - *attach_workspace
-  #    - run:
-  #      name: Install PHP Metrics
-  #      command: composer require --dev phpmetrics/phpmetrics
-  #    - run:
-  #      name: Run PHP Metrics Analysis
-  #      command: |
-  #        ./vendor/bin/phpmetrics --report-html=phpmetrics-report . || exit 0
-  #    - store_artifacts:
-  #      path: phpmetrics-report
-  #      destination: phpmetrics-report
-
-  deploy-ec2-production:
-    executor: simple-executor
+  metrics-phpmetrics:
+    executor: php-executor
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "${AWS_SSH_KEY_FINGERPRINT}"
+      - *attach_workspace
       - run:
-          name: Déploiement sur AWS EC2
+          name: Installer PHP Metrics
+          command: composer require --dev phpmetrics/phpmetrics
+      - run:
+          name: Exécuter PHP Metrics
           command: |
-            ssh -o StrictHostKeyChecking=no $AWS_EC2_USER@$AWS_EC2_HOST \<< 'EOF'
-              # Naviguer vers le répertoire de déploiement
-              cd $DEPLOY_DIRECTORY
-            
-              # Mettre à jour le dépôt
-              git pull origin main
-            
-              # Installer les dépendances
-              composer install --no-dev --optimize-autoloader
-            
-              # (Optionnel) Compiler des assets si nécessaire
-              # npm install && npm run build
-            
-              # Redémarrer le service (par exemple, si l'application utilise PHP-FPM)
-              sudo systemctl restart php-fpm
-              sudo systemctl restart nginx
-            EOF
+            mkdir -p metrics-report
+            ./vendor/bin/phpmetrics --report-html=metrics-report ./src
+      - store_artifacts:
+          path: metrics-report
+          destination: phpmetrics-report
 
-  
-  
-  
-
+                  
   build-docker-image:
     executor: builder-executor
     steps:
@@ -309,7 +278,7 @@ jobs:
 
             # Build the Docker image
             docker build \
-            -f docker/Dockerfile \
+            -f Docker/Dockerfile \
             -t $REPOSITORY:$TAG \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg TAG="${TAG}" \
@@ -322,6 +291,7 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
+
 
   deploy-ssh-staging:
     executor: simple-executor
@@ -379,6 +349,9 @@ workflows:
       - lint-psalm:
           requires:
             -  build-setup
+      - metrics-phpmetrics:
+          requires:
+            - build-setup
 #      - deploy-ssh-production:
 #          requires:
 #              - hold
@@ -410,22 +383,3 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
-
-production_deployment:
-  jobs:
-    - hold:
-        type: approval
-        filters:
-          branches:
-            only:
-              - main
-              - master
-    - deploy-ec2-production:
-        requires:
-          - hold
-        filters:
-          branches:
-            only:
-              - main
-              - master
-
