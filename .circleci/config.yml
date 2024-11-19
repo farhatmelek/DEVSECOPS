@@ -326,6 +326,7 @@ jobs:
             echo "Configuration de la clé PEM..."
             echo "$AWS_EC2_PEM_KEY" > ~/.ssh/my-ec2-key.pem
             chmod 600 ~/.ssh/my-ec2-key.pem
+            echo ~/.ssh/my-ec2-key.pe
             echo "Clé PEM configurée avec succès $AWS_EC2_PEM_KEY."
 
       - run:
