@@ -279,7 +279,7 @@ jobs:
       - run:
           name: Charger les secrets depuis Infisical
           command: |
-            infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
+            infisical run --token="$INFISICAL_API_TOKEN" --project="VOTRE_PROJECT_ID" --env=production --path=/ \
               -- sh -c "env > /tmp/infisical.env"
             if [ ! -f /tmp/infisical.env ]; then
               echo "Erreur : Fichier infisical.env introuvable."
@@ -289,12 +289,18 @@ jobs:
               echo "Secrets chargés avec succès."
             fi
       - run:
+          name: Debug Secrets
+          command: |
+            echo "GHCR_USERNAME: $GHCR_USERNAME"
+            echo "GHCR_PAT: ${#GHCR_PAT} caractères"
+      - run:
           name: Build and Push Docker Image to GHCR
           command: |
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
             docker build -t $REPOSITORY:$TAG .
             docker push $REPOSITORY:$TAG
+  
   
 
   deploy-ssh-staging:
