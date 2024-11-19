@@ -316,6 +316,32 @@ jobs:
 
 #  deploy-ssh-production:
 # It's up to you :)
+  deploy-ssh-production:
+    executor: simple-executor
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "${AWS_SSH_FINGERPRINT}" # Ajoutez la clé publique correspondante dans AWS
+      - run:
+          name: Configurer et charger la clé PEM
+          command: |
+            echo "Configuration de la clé PEM..."
+            echo "$AWS_EC2_PEM_KEY" > ~/.ssh/my-ec2-key.pem
+            chmod 600 ~/.ssh/my-ec2-key.pem
+      - run:
+          name: Déploiement sur EC2
+          command: |
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} << 'EOF'
+              echo "Connexion réussie au serveur EC2..."
+              echo "Création du répertoire de déploiement..."
+              mkdir -p ${DEPLOY_PATH}
+              echo "Déploiement des fichiers..."
+              rsync -avz --delete ~/project/ ${DEPLOY_PATH}/
+              echo "Redémarrage de l'application..."
+              sudo docker-compose down
+              sudo docker-compose up -d
+              echo "Déploiement terminé avec succès."
+            EOF
 
 
 workflows:
@@ -352,14 +378,15 @@ workflows:
       - metrics-phpmetrics:
           requires:
             - build-setup
-#      - deploy-ssh-production:
-#          requires:
-#              - hold
-#          filters:
-#            branches:
-#              only:
-#                - main
-#                - master
+      - deploy-ssh-production:
+          requires:
+             - hold
+             - build-setup
+          filters:
+            branches:
+              only:
+                - main
+                - master
       - deploy-ssh-staging:
           requires:
             - hold
