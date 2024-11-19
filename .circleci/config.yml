@@ -275,34 +275,38 @@ jobs:
             echo "Repository: ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
             echo "Branch: _______"
       - run:
+          name: Install Infisical CLI
+          command: |
+            curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash
+            sudo apt-get update
+            sudo apt-get install -y infisical
+      - run:
+          name: Verify Infisical CLI Installation
+          command: infisical --version
+      - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
-            # Variables pour l'image Docker
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
-
-            # Vérification du token Infisical
-            infisical run --token=$INFISICAL_API_TOKEN -- printenv || exit 1
-
+            
+            echo "Building Docker image for repository: $REPOSITORY, tag: $TAG"
+            
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-
-            # Build the Docker image avec injection des secrets Infisical
-            infisical run --token=$INFISICAL_API_TOKEN -- docker build \
-            -f Docker/Dockerfile \
-            -t $REPOSITORY:$TAG \
-            --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-            --build-arg TAG="${TAG}" \
-            --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
-            --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
-            --build-arg SQLITE_VERSION=3430200 \
-            --build-arg SQLITE_YEAR=2023 \
-            --build-arg PROJECT_USERNAME=$CIRCLE_PROJECT_USERNAME \
-            .
-
+            
+            # Build the Docker image
+            docker build -f Docker/Dockerfile \
+              -t $REPOSITORY:$TAG \
+              --build-arg INFISICAL_API_TOKEN=$INFISICAL_API_TOKEN \
+              --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+              --build-arg TAG="${TAG}" \
+              --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
+              --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
+              .
+            
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-  
+
   
 
   deploy-ssh-staging:
