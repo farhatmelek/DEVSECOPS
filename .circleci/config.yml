@@ -258,7 +258,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-#          version: 20.10.23
           docker_layer_caching: true
       - run:
           name: Vérifier le token Infisical
@@ -268,25 +267,26 @@ jobs:
               exit 1
             fi
       - run:
-          name: Debug Variables
-          command: |
-            echo "GHCR_USERNAME: $GHCR_USERNAME"
-            echo "GHCR_PAT: ${#GHCR_PAT} characters"
-            echo "Repository: ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
-            echo "Branch: _______"
-      - run:
-          name: Install Infisical CLI
+          name: Installer la CLI Infisical
           command: |
             curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash
             sudo apt-get update
             sudo apt-get install -y infisical
       - run:
-          name: Verify Infisical CLI Installation
-          command: infisical --version
+          name: Récupérer les secrets depuis Infisical
+          command: |
+            infisical run --token "$INFISICAL_API_TOKEN" --env=dev --path=/ -- printenv | grep INFISICAL > secrets.txt
+            source secrets.txt
+      - run:
+          name: Debug Variables
+          command: |
+            echo "GHCR_USERNAME: $GHCR_USERNAME"
+            echo "GHCR_PAT: ${#GHCR_PAT} characters"
+            echo "Repository: ghcr.io/$GHCR_USERNAME/$CIRCLE_PROJECT_REPONAME"
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
-            REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            REPOSITORY=$(echo "ghcr.io/$GHCR_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
             
             echo "Building Docker image for repository: $REPOSITORY, tag: $TAG"
@@ -306,6 +306,7 @@ jobs:
             
             # Push the Docker image
             docker push $REPOSITORY:$TAG
+
 
   
 
