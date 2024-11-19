@@ -261,6 +261,15 @@ jobs:
           version: default
           docker_layer_caching: true
       - run:
+          name: Vérifier le token Infisical
+          command: |
+            if [ -z "$INFISICAL_API_TOKEN" ]; then
+              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini dans les variables CircleCI."
+              exit 1
+            else
+              echo "INFISICAL_API_TOKEN récupéré : ${INFISICAL_API_TOKEN}"
+            fi
+      - run:
           name: Charger les secrets depuis Infisical
           command: |
             infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
@@ -302,6 +311,7 @@ jobs:
             # Push the Docker image
             docker push $REPOSITORY:$TAG
             docker push $REPOSITORY:latest
+  
   
   
   
