@@ -261,55 +261,34 @@ jobs:
           version: default
           docker_layer_caching: true
       - run:
-          name: Vérifier le token Infisical
+          name: Vérifier l'installation de la CLI Infisical
           command: |
-            if [ -z "$INFISICAL_API_TOKEN" ]; then
-              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini."
+            if ! command -v infisical &> /dev/null; then
+              echo "Infisical CLI n'est pas installé."
               exit 1
+            else
+              echo "Infisical CLI est installé correctement."
+              infisical --version
             fi
-            echo "INFISICAL_API_TOKEN récupéré avec succès."
-
       - run:
           name: Charger les secrets depuis Infisical
           command: |
             infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
               -- sh -c "env > /tmp/infisical.env"
-            source /tmp/infisical.env
-            echo "Secrets chargés depuis Infisical :"
-            env | grep "GHCR_"
-
+            if [ ! -f /tmp/infisical.env ]; then
+              echo "Erreur : Fichier infisical.env introuvable."
+              exit 1
+            else
+              source /tmp/infisical.env
+              echo "Secrets chargés avec succès."
+            fi
       - run:
-          name: Build and Push Docker Image to GHCR (GitHub Container Registry)
+          name: Build and Push Docker Image to GHCR
           command: |
-            # Sanitize repository name and branch
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
-            BRANCH=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
-            TAG=${BRANCH}_$(date +%Y-%m-%d)
-
-            echo "Building Docker image for repository: $REPOSITORY with tag: $TAG"
-
-            # Login to GHCR
-            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-
-            # Build Docker image
-            docker build -f Docker/Dockerfile \
-              -t $REPOSITORY:$TAG \
-              --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
-              --build-arg TAG="${TAG}" \
-              --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
-              --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
-              .
-
-            # Tag and push Docker image
-            docker tag $REPOSITORY:$TAG $REPOSITORY:latest
+            TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
+            docker build -t $REPOSITORY:$TAG .
             docker push $REPOSITORY:$TAG
-            docker push $REPOSITORY:latest
-  
-  
-  
-  
-  
-  
   
 
   deploy-ssh-staging:
