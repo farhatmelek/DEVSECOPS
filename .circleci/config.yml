@@ -273,7 +273,7 @@ jobs:
             echo "GHCR_USERNAME: $GHCR_USERNAME"
             echo "GHCR_PAT: ${#GHCR_PAT} characters"
             echo "Repository: ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME"
-
+            echo "Branch: _______"
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
