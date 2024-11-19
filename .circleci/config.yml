@@ -321,26 +321,6 @@ jobs:
 
 #  deploy-ssh-production:
 # It's up to you :)
-  deploy-ssh-production:
-    executor: simple-executor
-    steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "$PRODUCTION_SSH_FINGERPRINT"
-      - deploy:
-          name: Deploy docker image to AWS
-          command: |
-            REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
-            CONTAINER_NAME=$(echo "${CIRCLE_PROJECT_REPONAME}_latest_container" | tr '[:upper:]' '[:lower:]' | tr -d '_')
-
-            set -x
-            ssh -o StrictHostKeyChecking=no $PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST \<< EOF
-            sudo docker stop "$CONTAINER_NAME"
-            sudo docker rm "$CONTAINER_NAME"
-            sudo docker pull "$REPOSITORY:latest"
-            sudo docker run -e INFISICAL_API_TOKEN="$INFISICAL_API_TOKEN" --detach --publish 80:80 --name "$CONTAINER_NAME" "$REPOSITORY:latest"
-            sudo docker ps
-            EOF
 
 
 workflows:
@@ -408,15 +388,3 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
-      - deploy-ssh-production:
-          requires:
-            - build-docker-image
-            - hold
-          context:
-            - api_tokens-context
-          filters:
-            branches:
-              only:
-                - main
-                # - /^release\/.*/
-                # - master
