@@ -325,8 +325,11 @@ jobs:
             REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
             CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
 
-            echo "Connexion au serveur EC2 et préparation du déploiement... "
+            echo "Connexion au serveur EC2 et préparation du déploiement..."
             ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
+              echo 'Authentification Docker avec GitHub...'
+              echo '$GHCR_PAT' | docker login ghcr.io -u $GHCR_USERNAME --password-stdin
+
               echo 'Arrêt et suppression du conteneur existant...'
               sudo docker stop ${CONTAINER_NAME} || true
               sudo docker rm ${CONTAINER_NAME} || true
@@ -342,6 +345,7 @@ jobs:
             "
 
             echo "Déploiement terminé avec succès."
+
 
 
 
