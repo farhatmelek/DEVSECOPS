@@ -283,6 +283,12 @@ jobs:
             fi
 
       - run:
+          name: Afficher le token Infisical (partiel pour debug)
+          command: |
+            echo "Affichage du token Infisical (4 derniers caractères uniquement) :"
+            echo "${INFISICAL_API_TOKEN: -4}"
+
+      - run:
           name: Charger les secrets depuis Infisical
           command: |
             echo "Chargement des secrets depuis Infisical..."
@@ -298,6 +304,18 @@ jobs:
             else
               echo "SUCCESS : Secrets chargés avec succès."
               source /tmp/infisical.env
+            fi
+
+      - run:
+          name: Tester la connexion à GHCR avec les secrets
+          command: |
+            echo "Test de connexion à GHCR avec les secrets chargés..."
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            if [ $? -ne 0 ]; then
+              echo "ERREUR : Échec de la connexion à GHCR."
+              exit 1
+            else
+              echo "SUCCESS : Connexion à GHCR réussie."
             fi
 
       - run:
@@ -326,13 +344,6 @@ jobs:
             echo "Répertoire : $REPOSITORY"
             echo "Tag : $TAG"
 
-            echo "Connexion à GHCR..."
-            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            if [ $? -ne 0 ]; then
-              echo "ERREUR : Échec de la connexion à GHCR."
-              exit 1
-            fi
-
             echo "Construction de l'image Docker..."
             docker build -t $REPOSITORY:$TAG .
             if [ $? -ne 0 ]; then
@@ -349,6 +360,7 @@ jobs:
 
             echo "SUCCESS : Image Docker construite et poussée avec succès."
             echo "Image : $REPOSITORY:$TAG"
+  
   
   
 
