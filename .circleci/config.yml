@@ -329,7 +329,7 @@ jobs:
           name: Déployer sur EC2
           command: |
             echo "Connexion au serveur EC2..."
-            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${DEPLOY_USER}@${AWS_EC2_PUBLIC_IP} << EOF
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${DEPLOY_USER}@${AWS_EC2_PUBLIC_IP} "
               echo "Connexion réussie au serveur EC2."
               echo "Création du répertoire de déploiement..."
               mkdir -p ${DEPLOY_PATH}
@@ -340,7 +340,7 @@ jobs:
               sudo docker-compose down
               sudo docker-compose up -d
               echo "Déploiement terminé avec succès."
-            EOF
+            "
 
 
 
