@@ -317,53 +317,60 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "${AWS_SSH_FINGERPRINT}" # Clé SSH déjà configurée dans CircleCI
+            - "${AWS_SSH_FINGERPRINT}"
       - run:
-          name: Connexion au serveur EC2 et préparation
+          name: Déployer sur EC2
           command: |
+            # Définition des variables
+            REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
+            CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
+
             echo "Connexion au serveur EC2..."
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Connexion réussie au serveur EC2...'"
 
-      - run:
-          name: Authentification Docker avec GitHub Container Registry
-          command: |
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Authentification Docker avec GHCR...' && \
-               echo '${GHCR_PAT}' | docker login ghcr.io -u '${GHCR_USERNAME}' --password-stdin"
+            # Authentification Docker sur EC2
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "echo '$GHCR_PAT' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin || {
+                echo 'Erreur : Échec de l'authentification Docker' >&2;
+                exit 1;
+            }"
 
-      - run:
-          name: Arrêt et suppression du conteneur existant
-          command: |
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Arrêt et suppression du conteneur existant...' && \
-               docker stop devsecops_container || true && \
-               docker rm devsecops_container || true"
+            # Arrêt du conteneur existant (si présent)
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "docker stop ${CONTAINER_NAME} || echo 'Aucun conteneur existant à arrêter.'"
 
-      - run:
-          name: Téléchargement de la dernière image Docker
-          command: |
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Téléchargement de la dernière image Docker...' && \
-               docker pull ghcr.io/${GHCR_USERNAME}/devsecops:latest"
+            # Suppression du conteneur existant (si présent)
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "docker rm ${CONTAINER_NAME} || echo 'Aucun conteneur existant à supprimer.'"
 
-      - run:
-          name: Lancement du nouveau conteneur Docker
-          command: |
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Lancement du nouveau conteneur Docker...' && \
-               docker run --detach \
-                          --name devsecops_container \
-                          --publish 80:80 \
-                          --env-file /path/to/.env \
-                          ghcr.io/${GHCR_USERNAME}/devsecops:latest"
+            # Téléchargement de la dernière image Docker
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "docker pull ${REPOSITORY}:latest || {
+                echo 'Erreur : Échec du téléchargement de l'image Docker' >&2;
+                exit 1;
+            }"
 
-      - run:
-          name: Vérification des conteneurs actifs
-          command: |
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
-              "echo 'Liste des conteneurs actifs :' && \
-               docker ps"
+            # Lancement du nouveau conteneur
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest || {
+                echo 'Erreur : Échec du lancement du conteneur Docker' >&2;
+                exit 1;
+            }"
+
+            # Vérification des conteneurs actifs
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+            "docker ps"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 workflows:
