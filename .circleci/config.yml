@@ -343,6 +343,8 @@ jobs:
               sudo docker-compose down
               sudo docker-compose up -d
               echo "Déploiement terminé avec succès."
+            EOF
+
 
 
 
