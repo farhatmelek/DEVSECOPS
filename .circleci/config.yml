@@ -362,7 +362,7 @@ jobs:
             # Vérification des conteneurs actifs
             echo "Liste des conteneurs actifs :"
             docker ps
-EOF
+          EOF
 
 echo "Déploiement terminé avec succès."
 
