@@ -378,15 +378,6 @@ workflows:
       - metrics-phpmetrics:
           requires:
             - build-setup
-      - deploy-ssh-production:
-          requires:
-             - hold
-             - build-setup
-          filters:
-            branches:
-              only:
-                - main
-                - master
       - deploy-ssh-staging:
           requires:
             - hold
@@ -394,6 +385,14 @@ workflows:
             branches:
               only:
                 - /^release\/.*/
+      - deploy-ssh-production:
+          requires:
+            - build-setup
+            - hold
+          filters:
+            branches:
+              only:
+                - main
 
 
 
