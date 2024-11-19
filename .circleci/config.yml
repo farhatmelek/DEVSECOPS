@@ -319,24 +319,14 @@ jobs:
           fingerprints:
             - "${AWS_SSH_FINGERPRINT}"
       - run:
-          name: Configurer et charger la clé PEM
-          command: |
-            echo "Création du dossier ~/.ssh..."
-            mkdir -p ~/.ssh
-            echo "Configuration de la clé PEM..."
-            echo "$AWS_EC2_PEM_KEY" > ~/.ssh/my-ec2-key.pem
-            chmod 600 ~/.ssh/my-ec2-key.pem
-            echo "Clé PEM configurée avec succès"
-
-      - run:
           name: Déployer sur EC2
           command: |
             # Définition des variables pour le conteneur et le dépôt
             REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
             CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
-            
+
             echo "Connexion au serveur EC2 et préparation du déploiement... "
-            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
               echo 'Arrêt et suppression du conteneur existant...'
               sudo docker stop ${CONTAINER_NAME} || true
               sudo docker rm ${CONTAINER_NAME} || true
@@ -352,6 +342,7 @@ jobs:
             "
 
             echo "Déploiement terminé avec succès."
+
 
 
 
