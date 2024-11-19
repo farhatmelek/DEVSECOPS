@@ -315,32 +315,44 @@ jobs:
   deploy-ssh-production:
     executor: simple-executor
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "${AWS_SSH_FINGERPRINT}"
       - run:
           name: Configurer et charger la clé PEM
           command: |
             echo "Création du dossier ~/.ssh..."
             mkdir -p ~/.ssh
             echo "Configuration de la clé PEM..."
-            echo "$AWS_EC2_PEM_KEY" | base64 --decode > ~/.ssh/my-ec2-key.pem
+            echo "$AWS_EC2_PEM_KEY" > ~/.ssh/my-ec2-key.pem
             chmod 600 ~/.ssh/my-ec2-key.pem
             echo "Clé PEM configurée avec succès."
 
       - run:
           name: Déployer sur EC2
           command: |
-            echo "Connexion au serveur EC2..."
-            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${DEPLOY_USER}@${AWS_EC2_PUBLIC_IP} << EOF
-            echo "Connexion réussie au serveur EC2."
-            echo "Création du répertoire de déploiement..."
-            mkdir -p ${DEPLOY_PATH}
-            echo "Synchronisation des fichiers..."
-            rsync -avz --delete ~/project/ ${DEPLOY_PATH}/
-            echo "Redémarrage de l'application..."
-            cd ${DEPLOY_PATH}
-            sudo docker-compose down
-            sudo docker-compose up -d
+            # Définition des variables pour le conteneur et le dépôt
+            REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
+            CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
+
+            echo "Connexion au serveur EC2 et préparation du déploiement..."
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
+              echo 'Arrêt et suppression du conteneur existant...'
+              sudo docker stop ${CONTAINER_NAME} || true
+              sudo docker rm ${CONTAINER_NAME} || true
+
+              echo 'Téléchargement de la dernière image Docker...'
+              sudo docker pull ${REPOSITORY}:latest
+
+              echo 'Lancement du nouveau conteneur...'
+              sudo docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest
+
+              echo 'Liste des conteneurs actifs :'
+              sudo docker ps
+            "
+
             echo "Déploiement terminé avec succès."
-            EOF
+
 
 
 
