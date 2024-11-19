@@ -364,7 +364,7 @@ jobs:
             docker ps
           EOF
 
-echo "Déploiement terminé avec succès."
+          echo "Déploiement terminé avec succès."
 
 
 
