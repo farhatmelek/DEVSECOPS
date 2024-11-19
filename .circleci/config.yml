@@ -313,59 +313,58 @@ jobs:
 
 
   deploy-ssh-production:
-    executor: simple-executor
-    steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "${AWS_SSH_FINGERPRINT}"
-      - run:
-          name: Déployer sur EC2
-          command: |
-            # Définition des variables pour le conteneur et le dépôt
-            REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
-            CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
+  executor: simple-executor
+  steps:
+    - add_ssh_keys:
+        fingerprints:
+          - "${AWS_SSH_FINGERPRINT}"
+    - run:
+        name: Déployer sur EC2
+        command: |
+          # Définition des variables pour le conteneur et le dépôt
+          REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
+          CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
 
-            echo "Connexion au serveur EC2 et préparation du déploiement..."
-            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} << 'EOF'
-              set -e
+          echo "Connexion au serveur EC2 et préparation du déploiement..."
+          ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} << 'EOF'
+            set -e
 
-              # Authentification Docker avec GitHub
-              echo "Authentification Docker avec GitHub..."
-              echo '$GHCR_PAT' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin || {
-                echo "Erreur : Échec de l'authentification Docker" >&2
-                exit 1
-              }
+            # Authentification Docker avec GitHub
+            echo "Authentification Docker avec GitHub..."
+            echo '$GHCR_PAT' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin || {
+              echo "Erreur : Échec de l'authentification Docker" >&2
+              exit 1
+            }
 
-              # Arrêt et suppression du conteneur existant
-              echo "Arrêt et suppression du conteneur existant..."
-              if docker ps -q --filter "name=${CONTAINER_NAME}" | grep -q .; then
-                docker stop ${CONTAINER_NAME}
-                docker rm ${CONTAINER_NAME}
-              else
-                echo "Aucun conteneur existant trouvé avec le nom ${CONTAINER_NAME}."
-              fi
+            # Arrêt et suppression du conteneur existant
+            echo "Arrêt et suppression du conteneur existant..."
+            if docker ps -q --filter "name=${CONTAINER_NAME}" | grep -q .; then
+              docker stop ${CONTAINER_NAME}
+              docker rm ${CONTAINER_NAME}
+            else
+              echo "Aucun conteneur existant trouvé avec le nom ${CONTAINER_NAME}."
+            fi
 
-              # Téléchargement de la dernière image Docker
-              echo "Téléchargement de la dernière image Docker..."
-              docker pull ${REPOSITORY}:latest || {
-                echo "Erreur : Échec du téléchargement de l'image Docker" >&2
-                exit 1
-              }
+            # Téléchargement de la dernière image Docker
+            echo "Téléchargement de la dernière image Docker..."
+            docker pull ${REPOSITORY}:latest || {
+              echo "Erreur : Échec du téléchargement de l'image Docker" >&2
+              exit 1
+            }
 
-              # Lancement du nouveau conteneur
-              echo "Lancement du nouveau conteneur..."
-              docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest || {
-                echo "Erreur : Échec du lancement du conteneur Docker" >&2
-                exit 1
-              }
+            # Lancement du nouveau conteneur
+            echo "Lancement du nouveau conteneur..."
+            docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest || {
+              echo "Erreur : Échec du lancement du conteneur Docker" >&2
+              exit 1
+            }
 
-              # Vérification des conteneurs actifs
-              echo "Liste des conteneurs actifs :"
-              docker ps
-  EOF
-  
-  echo "Déploiement terminé avec succès."
+            # Vérification des conteneurs actifs
+            echo "Liste des conteneurs actifs :"
+            docker ps
+EOF
 
+echo "Déploiement terminé avec succès."
 
 
 
