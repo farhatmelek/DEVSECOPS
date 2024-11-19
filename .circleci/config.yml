@@ -261,6 +261,17 @@ jobs:
           version: default
           docker_layer_caching: true
       - run:
+          name: Charger les secrets depuis Infisical
+          command: |
+            infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
+              -- sh -c "env > /tmp/infisical.env"
+            source /tmp/infisical.env
+      - run:
+          name: Vérifier les variables chargées
+          command: |
+            echo "GHCR_USERNAME: $GHCR_USERNAME"
+            echo "GHCR_PAT: ${#GHCR_PAT} characters"
+      - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
             if [ ! -z "$SKIP_BUILD" ]; then
