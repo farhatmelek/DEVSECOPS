@@ -260,34 +260,28 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
-          name: Vérifier le token Infisical
+          name: Charger les secrets depuis Infisical
           command: |
-            if [ -z "$INFISICAL_API_TOKEN" ]; then
-              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini dans les variables CircleCI."
-              exit 1
-            fi
+            infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
+              -- sh -c "env > /tmp/infisical.env"
+            source /tmp/infisical.env
       - run:
-          name: Récupérer les secrets depuis Infisical
-          command: |
-            infisical run --token "$INFISICAL_API_TOKEN" --env=dev --path=/ -- printenv | grep INFISICAL > secrets.txt
-            source secrets.txt
-      - run:
-          name: Debug Variables
+          name: Debug des variables Infisical
           command: |
             echo "GHCR_USERNAME: $GHCR_USERNAME"
             echo "GHCR_PAT: ${#GHCR_PAT} characters"
-            echo "Repository: ghcr.io/$GHCR_USERNAME/$CIRCLE_PROJECT_REPONAME"
+            echo "INFISICAL_API_TOKEN: ${#INFISICAL_API_TOKEN} characters"
       - run:
-          name: Build and Push Docker Image to GHCR (GitHub Container Registry)
+          name: Build and Push Docker Image to GHCR
           command: |
             REPOSITORY=$(echo "ghcr.io/$GHCR_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
-            
+
             echo "Building Docker image for repository: $REPOSITORY, tag: $TAG"
-            
+
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            
+
             # Build the Docker image
             docker build -f Docker/Dockerfile \
               -t $REPOSITORY:$TAG \
@@ -297,11 +291,12 @@ jobs:
               --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
               --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
               .
-            
+
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-
-
+  
+  
+  
   
 
   deploy-ssh-staging:
