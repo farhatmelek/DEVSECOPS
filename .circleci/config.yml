@@ -261,23 +261,27 @@ jobs:
 #          version: 20.10.23
           docker_layer_caching: true
       - run:
+          name: Vérifier le token Infisical
+          command: |
+            if [ -z "$INFISICAL_API_TOKEN" ]; then
+              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini dans les variables CircleCI."
+              exit 1
+            fi
+      - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
-            if [ ! -z "$SKIP_BUILD" ]; then
-              echo "Skipping build"
-              circleci step halt
-              exit 0
-            fi
-
-            # Sanitize the repository name and branch name
+            # Variables pour l'image Docker
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
+
+            # Vérification du token Infisical
+            infisical run --token=$INFISICAL_API_TOKEN -- printenv || exit 1
 
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
-            # Build the Docker image
-            docker build \
+            # Build the Docker image avec injection des secrets Infisical
+            infisical run --token=$INFISICAL_API_TOKEN -- docker build \
             -f Docker/Dockerfile \
             -t $REPOSITORY:$TAG \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
@@ -291,7 +295,8 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-
+  
+  
 
   deploy-ssh-staging:
     executor: simple-executor
@@ -316,6 +321,26 @@ jobs:
 
 #  deploy-ssh-production:
 # It's up to you :)
+  deploy-ssh-production:
+    executor: simple-executor
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "$PRODUCTION_SSH_FINGERPRINT"
+      - deploy:
+          name: Deploy docker image to AWS
+          command: |
+            REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            CONTAINER_NAME=$(echo "${CIRCLE_PROJECT_REPONAME}_latest_container" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+
+            set -x
+            ssh -o StrictHostKeyChecking=no $PRODUCTION_SSH_USER@$PRODUCTION_SSH_HOST \<< EOF
+            sudo docker stop "$CONTAINER_NAME"
+            sudo docker rm "$CONTAINER_NAME"
+            sudo docker pull "$REPOSITORY:latest"
+            sudo docker run -e INFISICAL_API_TOKEN="$INFISICAL_API_TOKEN" --detach --publish 80:80 --name "$CONTAINER_NAME" "$REPOSITORY:latest"
+            sudo docker ps
+            EOF
 
 
 workflows:
@@ -383,3 +408,15 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
+      - deploy-ssh-production:
+          requires:
+            - build-docker-image
+            - hold
+          context:
+            - api_tokens-context
+          filters:
+            branches:
+              only:
+                - main
+                # - /^release\/.*/
+                # - master
