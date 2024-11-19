@@ -276,6 +276,7 @@ jobs:
               echo "Infisical CLI est installé correctement."
               infisical --version
             fi
+
       - run:
           name: Charger les secrets depuis Infisical
           command: |
