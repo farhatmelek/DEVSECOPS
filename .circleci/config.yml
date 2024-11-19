@@ -326,7 +326,7 @@ jobs:
             echo "Configuration de la clé PEM..."
             echo "$AWS_EC2_PEM_KEY" > ~/.ssh/my-ec2-key.pem
             chmod 600 ~/.ssh/my-ec2-key.pem
-            echo "Clé PEM configurée avec succès."
+            echo "Clé PEM configurée avec succès $AWS_EC2_PEM_KEY."
 
       - run:
           name: Déployer sur EC2
@@ -335,7 +335,7 @@ jobs:
             REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
             CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
 
-            echo "Connexion au serveur EC2 et préparation du déploiement..."
+            echo "Connexion au serveur EC2 et préparation du déploiement... ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
             ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
               echo 'Arrêt et suppression du conteneur existant...'
               sudo docker stop ${CONTAINER_NAME} || true
