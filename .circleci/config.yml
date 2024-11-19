@@ -332,18 +332,12 @@ jobs:
           name: Déployer sur EC2
           command: |
             echo "Connexion au serveur EC2..."
-            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} <<'EOF'
-              echo "Connexion réussie au serveur EC2."
-              echo "Création du répertoire de déploiement..."
-              mkdir -p ${DEPLOY_PATH}
-              echo "Synchronisation des fichiers..."
-              rsync -avz --delete ~/project/ ${DEPLOY_PATH}/
-              echo "Redémarrage de l'application..."
-              cd ${DEPLOY_PATH}
-              sudo docker-compose down
-              sudo docker-compose up -d
-              echo "Déploiement terminé avec succès."
-              EOF
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} "mkdir -p ${DEPLOY_PATH}"
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} "rsync -avz --delete ~/project/ ${DEPLOY_PATH}/"
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} "cd ${DEPLOY_PATH} && sudo docker-compose down && sudo docker-compose up -d"
+            echo "Déploiement terminé avec succès."
+
+
 
 
 
