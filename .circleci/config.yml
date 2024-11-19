@@ -317,43 +317,54 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "${AWS_SSH_FINGERPRINT}"
+            - "${AWS_SSH_FINGERPRINT}" # Clé SSH déjà configurée dans CircleCI
       - run:
-          name: Déployer sur EC2
+          name: Connexion au serveur EC2 et préparation
           command: |
-            # Définition des variables
-            REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
-            CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
-
             echo "Connexion au serveur EC2..."
-            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} << 'EOF'
-              set -e
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Connexion réussie au serveur EC2...'"
 
-              echo "Authentification Docker avec GHCR..."
-              echo '$GHCR_PAT' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin || {
-                echo "Erreur : Échec de l'authentification Docker" >&2
-                exit 1
-              }
+      - run:
+          name: Authentification Docker avec GitHub Container Registry
+          command: |
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Authentification Docker avec GHCR...' && \
+               echo '${GHCR_PAT}' | docker login ghcr.io -u '${GHCR_USERNAME}' --password-stdin"
 
-              echo "Arrêt et suppression du conteneur existant..."
-              docker stop ${CONTAINER_NAME} || true
-              docker rm ${CONTAINER_NAME} || true
+      - run:
+          name: Arrêt et suppression du conteneur existant
+          command: |
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Arrêt et suppression du conteneur existant...' && \
+               docker stop devsecops_container || true && \
+               docker rm devsecops_container || true"
 
-              echo "Téléchargement de l'image Docker..."
-              docker pull ${REPOSITORY}:latest || {
-                echo "Erreur : Échec du téléchargement de l'image" >&2
-                exit 1
-              }
+      - run:
+          name: Téléchargement de la dernière image Docker
+          command: |
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Téléchargement de la dernière image Docker...' && \
+               docker pull ghcr.io/${GHCR_USERNAME}/devsecops:latest"
 
-              echo "Lancement du conteneur Docker..."
-              docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest || {
-                echo "Erreur : Échec du lancement du conteneur" >&2
-                exit 1
-              }
+      - run:
+          name: Lancement du nouveau conteneur Docker
+          command: |
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Lancement du nouveau conteneur Docker...' && \
+               docker run --detach \
+                          --name devsecops_container \
+                          --publish 80:80 \
+                          --env-file /path/to/.env \
+                          ghcr.io/${GHCR_USERNAME}/devsecops:latest"
 
-              echo "Liste des conteneurs actifs :"
-              docker ps
-            EOF
+      - run:
+          name: Vérification des conteneurs actifs
+          command: |
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} \
+              "echo 'Liste des conteneurs actifs :' && \
+               docker ps"
+
 
 workflows:
   main_workflow:
