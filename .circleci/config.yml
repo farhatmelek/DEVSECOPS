@@ -260,47 +260,95 @@ jobs:
       - setup_remote_docker:
           version: default
           docker_layer_caching: true
+
       - run:
           name: Installer Infisical CLI
           command: |
+            echo "Téléchargement et installation de la CLI Infisical..."
             curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo bash
             sudo apt-get update
             sudo apt-get install -y infisical
+            echo "Installation terminée."
+
       - run:
           name: Vérifier l'installation de la CLI Infisical
           command: |
+            echo "Vérification de l'installation de la CLI Infisical..."
             if ! command -v infisical &> /dev/null; then
-              echo "Infisical CLI n'est pas installé."
+              echo "ERREUR : Infisical CLI n'est pas installé."
               exit 1
             else
-              echo "Infisical CLI est installé correctement."
+              echo "SUCCESS : Infisical CLI est installé correctement."
               infisical --version
             fi
 
       - run:
           name: Charger les secrets depuis Infisical
           command: |
+            echo "Chargement des secrets depuis Infisical..."
             infisical run --token="$INFISICAL_API_TOKEN" --projectId="1b9c4f42-69d8-4c2e-b0c1-2fb4a02e65b0" --env=production --path=/ \
               -- sh -c "env > /tmp/infisical.env"
+            if [ $? -ne 0 ]; then
+              echo "ERREUR : Impossible de charger les secrets depuis Infisical."
+              exit 1
+            fi
             if [ ! -f /tmp/infisical.env ]; then
-              echo "Erreur : Fichier infisical.env introuvable."
+              echo "ERREUR : Fichier /tmp/infisical.env introuvable."
               exit 1
             else
+              echo "SUCCESS : Secrets chargés avec succès."
               source /tmp/infisical.env
-              echo "Secrets chargés avec succès."
             fi
+
       - run:
           name: Debug Secrets
           command: |
-            echo "GHCR_USERNAME: $GHCR_USERNAME"
-            echo "GHCR_PAT: ${#GHCR_PAT} caractères"
+            echo "Débogage des secrets chargés..."
+            if [ -z "$GHCR_USERNAME" ]; then
+              echo "ERREUR : GHCR_USERNAME n'est pas défini."
+            else
+              echo "GHCR_USERNAME: $GHCR_USERNAME"
+            fi
+
+            if [ -z "$GHCR_PAT" ]; then
+              echo "ERREUR : GHCR_PAT n'est pas défini."
+            else
+              echo "GHCR_PAT: ${#GHCR_PAT} caractères."
+            fi
+
       - run:
           name: Build and Push Docker Image to GHCR
           command: |
+            echo "Construction et push de l'image Docker..."
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
+
+            echo "Répertoire : $REPOSITORY"
+            echo "Tag : $TAG"
+
+            echo "Connexion à GHCR..."
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            if [ $? -ne 0 ]; then
+              echo "ERREUR : Échec de la connexion à GHCR."
+              exit 1
+            fi
+
+            echo "Construction de l'image Docker..."
             docker build -t $REPOSITORY:$TAG .
+            if [ $? -ne 0 ]; then
+              echo "ERREUR : Échec de la construction de l'image Docker."
+              exit 1
+            fi
+
+            echo "Push de l'image Docker..."
             docker push $REPOSITORY:$TAG
+            if [ $? -ne 0 ]; then
+              echo "ERREUR : Échec du push de l'image Docker."
+              exit 1
+            fi
+
+            echo "SUCCESS : Image Docker construite et poussée avec succès."
+            echo "Image : $REPOSITORY:$TAG"
   
   
 
