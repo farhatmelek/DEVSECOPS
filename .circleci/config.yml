@@ -261,6 +261,12 @@ jobs:
           version: default
           docker_layer_caching: true
       - run:
+          name: Installer Infisical CLI
+          command: |
+            curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | bash
+            sudo apt-get update
+            sudo apt-get install -y infisical
+      - run:
           name: Vérifier l'installation de la CLI Infisical
           command: |
             if ! command -v infisical &> /dev/null; then
