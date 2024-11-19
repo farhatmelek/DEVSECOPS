@@ -311,11 +311,7 @@ jobs:
             (flock -w 10 9 || exit 1; sudo -S service php${PHP_FPM_VERSION}-fpm restart ) 9>/tmp/fpm.lock
             EOF
 
-  
-  
 
-#  deploy-ssh-production:
-# It's up to you :)
   deploy-ssh-production:
     executor: simple-executor
     steps:
