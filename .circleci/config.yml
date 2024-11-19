@@ -407,7 +407,6 @@ workflows:
           requires:
             - hold
             - build-setup
-            - build-docker-image
             - deploy-ssh-staging
           filters:
             branches:
