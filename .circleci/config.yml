@@ -252,7 +252,6 @@ jobs:
           path: metrics-report
           destination: phpmetrics-report
 
-                  
   build-docker-image:
     executor: builder-executor
     steps:
