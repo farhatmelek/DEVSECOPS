@@ -326,25 +326,46 @@ jobs:
             CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
 
             echo "Connexion au serveur EC2 et préparation du déploiement..."
-            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
-              echo 'Authentification Docker avec GitHub...'
-              echo '$GHCR_PAT' | docker login ghcr.io -u $GHCR_USERNAME --password-stdin
+            ssh -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} bash -s <<EOF
+              set -e
 
-              echo 'Arrêt et suppression du conteneur existant...'
-              sudo docker stop ${CONTAINER_NAME} || true
-              sudo docker rm ${CONTAINER_NAME} || true
+              # Authentification Docker avec GitHub
+              echo "Authentification Docker avec GitHub..."
+              echo '$GHCR_PAT' | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin || {
+                echo "Erreur : Échec de l'authentification Docker" >&2
+                exit 1
+              }
 
-              echo 'Téléchargement de la dernière image Docker...'
-              sudo docker pull ${REPOSITORY}:latest
+              # Arrêt et suppression du conteneur existant
+              echo "Arrêt et suppression du conteneur existant..."
+              if docker ps -q --filter "name=${CONTAINER_NAME}" | grep -q .; then
+                docker stop ${CONTAINER_NAME}
+                docker rm ${CONTAINER_NAME}
+              else
+                echo "Aucun conteneur existant trouvé avec le nom ${CONTAINER_NAME}."
+              fi
 
-              echo 'Lancement du nouveau conteneur...'
-              sudo docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest
+              # Téléchargement de la dernière image Docker
+              echo "Téléchargement de la dernière image Docker..."
+              docker pull ${REPOSITORY}:latest || {
+                echo "Erreur : Échec du téléchargement de l'image Docker" >&2
+                exit 1
+              }
 
-              echo 'Liste des conteneurs actifs :'
-              sudo docker ps
-            "
+              # Lancement du nouveau conteneur
+              echo "Lancement du nouveau conteneur..."
+              docker run -d --name ${CONTAINER_NAME} -p 80:80 ${REPOSITORY}:latest || {
+                echo "Erreur : Échec du lancement du conteneur Docker" >&2
+                exit 1
+              }
 
+              # Vérification des conteneurs actifs
+              echo "Liste des conteneurs actifs :"
+              docker ps
+              EOF
+  
             echo "Déploiement terminé avec succès."
+
 
 
 
