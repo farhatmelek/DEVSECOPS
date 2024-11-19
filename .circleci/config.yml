@@ -334,7 +334,7 @@ jobs:
             # Définition des variables pour le conteneur et le dépôt
             REPOSITORY="ghcr.io/$GHCR_USERNAME/${CIRCLE_PROJECT_REPONAME,,}"
             CONTAINER_NAME="${CIRCLE_PROJECT_REPONAME,,}_container"
-
+            
             echo "Connexion au serveur EC2 et préparation du déploiement... "
             ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ${EC2_USERNAME}@${AWS_EC2_PUBLIC_IP} "
               echo 'Arrêt et suppression du conteneur existant...'
