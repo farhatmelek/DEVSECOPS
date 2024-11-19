@@ -264,40 +264,34 @@ jobs:
           name: Vérifier le token Infisical
           command: |
             if [ -z "$INFISICAL_API_TOKEN" ]; then
-              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini dans les variables CircleCI."
+              echo "Erreur : INFISICAL_API_TOKEN n'est pas défini."
               exit 1
-            else
-              echo "INFISICAL_API_TOKEN récupéré : ${INFISICAL_API_TOKEN}"
             fi
+            echo "INFISICAL_API_TOKEN récupéré avec succès."
+
       - run:
           name: Charger les secrets depuis Infisical
           command: |
             infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
               -- sh -c "env > /tmp/infisical.env"
             source /tmp/infisical.env
-      - run:
-          name: Vérifier les variables chargées
-          command: |
-            echo "GHCR_USERNAME: $GHCR_USERNAME"
-            echo "GHCR_PAT: ${#GHCR_PAT} characters"
+            echo "Secrets chargés depuis Infisical :"
+            env | grep "GHCR_"
+
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
-            if [ ! -z "$SKIP_BUILD" ]; then
-              echo "Skipping build"
-              circleci step halt
-              exit 0
-            fi
-
-            # Sanitize the repository name, branch name, and the tag
+            # Sanitize repository name and branch
             REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             BRANCH=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
             TAG=${BRANCH}_$(date +%Y-%m-%d)
 
+            echo "Building Docker image for repository: $REPOSITORY with tag: $TAG"
+
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
-            # Build the Docker image
+            # Build Docker image
             docker build -f Docker/Dockerfile \
               -t $REPOSITORY:$TAG \
               --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
@@ -306,11 +300,11 @@ jobs:
               --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
               .
 
+            # Tag and push Docker image
             docker tag $REPOSITORY:$TAG $REPOSITORY:latest
-
-            # Push the Docker image
             docker push $REPOSITORY:$TAG
             docker push $REPOSITORY:latest
+  
   
   
   
