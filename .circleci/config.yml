@@ -317,7 +317,7 @@ jobs:
     steps:
       - add_ssh_keys:
           fingerprints:
-            - "${AWS_SSH_FINGERPRINT}" # Optionnel si vous avez configuré une clé SSH via CircleCI
+            - "${AWS_SSH_FINGERPRINT}"
       - run:
           name: Configurer et charger la clé PEM
           command: |
@@ -332,7 +332,7 @@ jobs:
           name: Déployer sur EC2
           command: |
             echo "Connexion au serveur EC2..."
-            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} << EOF
+            ssh -i ~/.ssh/my-ec2-key.pem -o StrictHostKeyChecking=no ec2-user@${AWS_EC2_PUBLIC_IP} <<'EOF'
               echo "Connexion réussie au serveur EC2."
               echo "Création du répertoire de déploiement..."
               mkdir -p ${DEPLOY_PATH}
@@ -344,6 +344,7 @@ jobs:
               sudo docker-compose up -d
               echo "Déploiement terminé avec succès."
             EOF
+
 
 
 
