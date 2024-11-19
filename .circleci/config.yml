@@ -258,26 +258,21 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
+          version: default
           docker_layer_caching: true
       - run:
-          name: Charger les secrets depuis Infisical
+          name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
-            infisical run --token="$INFISICAL_API_TOKEN" --env=production --path=/ \
-              -- sh -c "env > /tmp/infisical.env"
-            source /tmp/infisical.env
-      - run:
-          name: Debug des variables Infisical
-          command: |
-            echo "GHCR_USERNAME: $GHCR_USERNAME"
-            echo "GHCR_PAT: ${#GHCR_PAT} characters"
-            echo "INFISICAL_API_TOKEN: ${#INFISICAL_API_TOKEN} characters"
-      - run:
-          name: Build and Push Docker Image to GHCR
-          command: |
-            REPOSITORY=$(echo "ghcr.io/$GHCR_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
-            TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
+            if [ ! -z "$SKIP_BUILD" ]; then
+              echo "Skipping build"
+              circleci step halt
+              exit 0
+            fi
 
-            echo "Building Docker image for repository: $REPOSITORY, tag: $TAG"
+            # Sanitize the repository name, branch name, and the tag
+            REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            BRANCH=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-')
+            TAG=${BRANCH}_$(date +%Y-%m-%d)
 
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
@@ -285,15 +280,18 @@ jobs:
             # Build the Docker image
             docker build -f Docker/Dockerfile \
               -t $REPOSITORY:$TAG \
-              --build-arg INFISICAL_API_TOKEN=$INFISICAL_API_TOKEN \
               --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
               --build-arg TAG="${TAG}" \
               --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
               --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
               .
 
+            docker tag $REPOSITORY:$TAG $REPOSITORY:latest
+
             # Push the Docker image
             docker push $REPOSITORY:$TAG
+            docker push $REPOSITORY:latest
+  
   
   
   
